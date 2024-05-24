@@ -7,6 +7,7 @@ from .base import (
     WaveformDataWriter,
 )
 from .dummy import ChunkedDummyDataset, DummyDataset
+from .renass import RENASS
 from .ethz import ETHZ
 from .geofon import GEOFON
 from .instance import InstanceCounts, InstanceCountsCombined, InstanceGM, InstanceNoise
