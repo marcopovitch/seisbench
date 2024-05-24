@@ -269,6 +269,11 @@ class RENASS(BenchmarkDataset):
             source_id = "sb_id_" + "".join(random.choice(chars) for _ in range(6))
         else:
             source_id = str(event.resource_id).split("/")[-1]
+            
+        try:
+            depth_error = origin.depth_errors["uncertainty"] / 1e3
+        except:
+            depth_error = None
 
         event_params = {
             "source_id": source_id,
@@ -279,7 +284,7 @@ class RENASS(BenchmarkDataset):
             "source_longitude_deg": origin.longitude,
             "source_longitude_uncertainty_km": origin.longitude_errors["uncertainty"],
             "source_depth_km": origin.depth / 1e3,
-            "source_depth_uncertainty_km": origin.depth_errors["uncertainty"] / 1e3,
+            "source_depth_uncertainty_km": depth_error,
         }
 
         if str(origin.time) < "2022-01-01":
