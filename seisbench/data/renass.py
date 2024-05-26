@@ -105,18 +105,32 @@ class RENASS(BenchmarkDataset):
         for event in catalog:
             origin, mag, fm, event_params = self._get_event_params(event)
             seisbench.logger.info(f"Downloading {event.resource_id}")
-
+            
             station_groups = defaultdict(list)
-            for pick in event.picks:
-                if pick.phase_hint is None:
+            for arrival in event.preferred_origin().arrivals:
+                if arrival.distance > 1.25:
                     continue
 
-                if "VDH4" in pick.waveform_id.id or "ECK" in pick.waveform_id.id:
-                    seisbench.logger.info(f"Ignoring {pick.waveform_id.id}")
-
-                station_groups[
-                    waveform_id_to_network_station_location(pick.waveform_id.id)
-                ].append(pick)
+                pick = next(
+                    (
+                        p
+                        for p in event.picks
+                        if p.resource_id == arrival.pick_id
+                    ),
+                    None,
+                )
+                if pick is None or pick.phase_hint is None or pick.evaluation_mode != "manual":
+                    continue
+                else:
+                    if "VDH4" in pick.waveform_id.station_code or "ECK" in pick.waveform_id.station_code:
+                        seisbench.logger.info(f"Ignoring {pick.waveform_id.id}")
+                        continue
+                    
+                    station_groups[
+                        waveform_id_to_network_station_location(
+                            pick.waveform_id.id
+                        )
+                    ].append(pick)
 
             for picks in station_groups.values():
                 try:
