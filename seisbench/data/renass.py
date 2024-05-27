@@ -7,6 +7,7 @@ import numpy as np
 import obspy
 import requests
 from obspy.clients.fdsn import Client
+from obspy.clients.filesystem.sds import Client as ClientSDS
 from obspy.clients.fdsn.header import FDSNNoDataException
 from obspy.geodetics import gps2dist_azimuth
 from tqdm import tqdm
@@ -49,18 +50,28 @@ class RENASS(BenchmarkDataset):
         )
 
         self._client = None
+        self._client_sds = None
         super().__init__(citation=citation, repository_lookup=True, **kwargs)
 
     @classmethod
     def _fdsn_client(cls):
         return Client(debug=False, base_url="http://10.0.1.36:8080")
 
+    @classmethod
+    def _fdsn_client_sds(cls):
+        return ClientSDS("/data/waveforms/resif/raw")
 
     @property
     def client(self):
         if self._client is None:
             self._client = self._fdsn_client()
         return self._client
+
+    @property
+    def client_sds(self):
+        if self._client_sds is None:
+            self._client = self._fdsn_client_sds()
+        return self._client_sds
 
     def _download_dataset(self, writer, time_before=60, time_after=60, **kwargs):
         """
@@ -105,7 +116,7 @@ class RENASS(BenchmarkDataset):
         for event in catalog:
             origin, mag, fm, event_params = self._get_event_params(event)
             seisbench.logger.info(f"Downloading {event.resource_id}")
-            
+
             station_groups = defaultdict(list)
             for arrival in event.preferred_origin().arrivals:
                 if arrival.distance > 1.25:
@@ -125,7 +136,7 @@ class RENASS(BenchmarkDataset):
                     if "VDH4" in pick.waveform_id.station_code or "ECK" in pick.waveform_id.station_code:
                         seisbench.logger.info(f"Ignoring {pick.waveform_id.id}")
                         continue
-                    
+
                     station_groups[
                         waveform_id_to_network_station_location(
                             pick.waveform_id.id
@@ -146,7 +157,7 @@ class RENASS(BenchmarkDataset):
                 t_end = max(pick.time for pick in picks) + time_after
 
                 try:
-                    waveforms = self.client.get_waveforms(
+                    waveforms = self.client_sds.get_waveforms(
                         network=trace_params["station_network_code"],
                         station=trace_params["station_code"],
                         location="*",
@@ -250,8 +261,8 @@ class RENASS(BenchmarkDataset):
             f"&minlatitude={latmin}&maxlatitude={latmax}"
             f"&minlongitude={lonmin}&maxlongitude={lonmax}"
             f"&minmagnitude={minmagnitude}&format=text"
-            f"&eventtype=induced or triggered event"
-            #f"&eventtype=earthquake,induced or triggered event,explosion,quarry blast"
+            #f"&eventtype=induced or triggered event"
+            f"&eventtype=earthquake,induced or triggered event,explosion,quarry blast"
         )
 
         resp = requests.get(query)
@@ -283,7 +294,7 @@ class RENASS(BenchmarkDataset):
             source_id = "sb_id_" + "".join(random.choice(chars) for _ in range(6))
         else:
             source_id = str(event.resource_id).split("/")[-1]
-            
+
         try:
             depth_error = origin.depth_errors["uncertainty"] / 1e3
         except:
