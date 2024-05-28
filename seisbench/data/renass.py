@@ -45,8 +45,7 @@ class RENASS(BenchmarkDataset):
 
         seisbench.logger.warning(
             "Check available storage and memory before downloading and general use "
-            "of ETHZ dataset. "
-            "Dataset size: waveforms.hdf5 ~22Gb, metadata.csv ~13Mb"
+            "of RENASS dataset. "
         )
 
         self._client = None
@@ -70,7 +69,7 @@ class RENASS(BenchmarkDataset):
     @property
     def client_sds(self):
         if self._client_sds is None:
-            self._client = self._fdsn_client_sds()
+            self._client_sds = self._fdsn_client_sds()
         return self._client_sds
 
     def _download_dataset(self, writer, time_before=60, time_after=60, **kwargs):
@@ -86,7 +85,7 @@ class RENASS(BenchmarkDataset):
 
         """
         seisbench.logger.info(
-            "No pre-processed version of ETHZ dataset found. "
+            "No pre-processed version of RENASS dataset found. "
             "Download and conversion of raw data will now be "
             "performed. This may take a while."
         )
@@ -115,7 +114,7 @@ class RENASS(BenchmarkDataset):
 
         for event in catalog:
             origin, mag, fm, event_params = self._get_event_params(event)
-            seisbench.logger.info(f"Downloading {event.resource_id}")
+            seisbench.logger.warning(f"Downloading {event.resource_id.id}")
 
             station_groups = defaultdict(list)
             for arrival in event.preferred_origin().arrivals:
@@ -130,18 +129,19 @@ class RENASS(BenchmarkDataset):
                     ),
                     None,
                 )
+
                 if pick is None or pick.phase_hint is None or pick.evaluation_mode != "manual":
                     continue
-                else:
-                    if "VDH4" in pick.waveform_id.station_code or "ECK" in pick.waveform_id.station_code:
-                        seisbench.logger.info(f"Ignoring {pick.waveform_id.id}")
-                        continue
 
-                    station_groups[
-                        waveform_id_to_network_station_location(
-                            pick.waveform_id.id
-                        )
-                    ].append(pick)
+                if pick.waveform_id.station_code in ["ECK2", "ECK3", "ECK4", "ECK5", "VDH4"]:
+                    seisbench.logger.warning(f"Ignoring {pick.waveform_id.id}")
+                    continue
+
+                station_groups[
+                    waveform_id_to_network_station_location(
+                        pick.waveform_id.id
+                    )
+                ].append(pick)
 
             for picks in station_groups.values():
                 try:
@@ -169,6 +169,7 @@ class RENASS(BenchmarkDataset):
                     seisbench.logger.debug(e)
                     self.no_data_catches += 1
                     continue
+
 
                 rotate_stream_to_zne(waveforms, inv)
 
