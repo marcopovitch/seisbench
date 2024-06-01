@@ -1,3 +1,8 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
-setup()
+setup(
+        name='seisbench',
+        version='0.7.0',
+        packages=find_packages(),
+
+)
