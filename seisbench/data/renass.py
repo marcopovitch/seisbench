@@ -98,6 +98,7 @@ class RENASS(BenchmarkDataset):
             "instrument_response": "not restituted",
         }
 
+        black_listed_events = ["eost2024dthhiqfo"]
         inv = self.client.get_stations(includerestricted=False)
         inventory_mapper = InventoryMapper(inv)
 
@@ -113,6 +114,10 @@ class RENASS(BenchmarkDataset):
         self.no_data_catches = 0
 
         for event in catalog:
+            if event.resource_id.id.split('/')[-1] in black_listed_events:
+                seisbench.logger.warning(f"Ignoring black listed event: {event.resource_id.id}")
+                continue
+
             origin, mag, fm, event_params = self._get_event_params(event)
             seisbench.logger.warning(f"Downloading {event.resource_id.id}")
 
@@ -133,7 +138,11 @@ class RENASS(BenchmarkDataset):
                 if pick is None or pick.phase_hint is None or pick.evaluation_mode != "manual":
                     continue
 
-                if pick.waveform_id.station_code in ["ECK2", "ECK3", "ECK4", "ECK5", "VDH4"]:
+                if pick.waveform_id.network_code in ["MT"]:
+                    seisbench.logger.warning(f"Ignoring pick with MT network")
+                    continue
+
+                if pick.waveform_id.station_code in ["ECK2", "ECK3", "ECK4", "ECK5", "VDH4", "RUSF", "EALK", "MFF"]:
                     seisbench.logger.warning(f"Ignoring {pick.waveform_id.id}")
                     continue
 
@@ -169,7 +178,18 @@ class RENASS(BenchmarkDataset):
                     seisbench.logger.debug(e)
                     self.no_data_catches += 1
                     continue
+                except Exception as e:
+                    seisbench.logger.error(e)
+                    continue
 
+                nodata = False
+                for trace in waveforms:
+                    if len(trace.data) == 0:
+                        seisbench.logger.error(f"No data for {event.resource_id.id}/{pick.waveform_id.id}")
+                        nodata = True
+                        break
+                if nodata:
+                    continue
 
                 rotate_stream_to_zne(waveforms, inv)
 
@@ -313,7 +333,7 @@ class RENASS(BenchmarkDataset):
             "source_depth_uncertainty_km": depth_error,
         }
 
-        if str(origin.time) < "2022-01-01":
+        if str(origin.time) < "2022-07-01":
             split = "train"
         elif str(origin.time) < "2024-01-01":
             split = "dev"
