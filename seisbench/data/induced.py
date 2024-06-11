@@ -22,25 +22,21 @@ from seisbench.util.trace_ops import (
 )
 
 
-class RENASS(BenchmarkDataset):
+class RITTER(BenchmarkDataset):
     """
-    BCSF-Renass dataset
-    https://renass.unistra.fr
+    Rittershoffen 2013 stimulation dataset
     """
 
     def __init__(self, **kwargs):
         citation = (
             "Each individual network has its own DOI. From publicly available data:\n"
-            "FR: \n"
-            "RA, \n"
-            "1K: \n"
-            "FO: \n"
-            "CH: https://doi.org/10.12686/sed/networks/ch\n"
+            "RT, \n"
+            "SZ: \n"
         )
 
         seisbench.logger.warning(
             "Check available storage and memory before downloading and general use "
-            "of RENASS dataset. "
+            "of RITTER dataset. "
         )
 
         self._client = None
@@ -80,7 +76,7 @@ class RENASS(BenchmarkDataset):
 
         """
         seisbench.logger.info(
-            "No pre-processed version of RENASS dataset found. "
+            "No pre-processed version of RITTER dataset found. "
             "Download and conversion of raw data will now be "
             "performed. This may take a while."
         )
@@ -93,17 +89,17 @@ class RENASS(BenchmarkDataset):
             "instrument_response": "not restituted",
         }
 
-        black_listed_events = ["eost2024dthhiqfo"]
+        black_listed_events = []
         inv = self.client.get_stations(includerestricted=False)
         inventory_mapper = InventoryMapper(inv)
 
-        if (self.path / "renass_events.xml").exists():
+        if (self.path / "ritter_events.xml").exists():
             seisbench.logger.info("Reading quakeml event catalog from cache.")
             catalog = obspy.read_events(
-                str(self.path / "renass_events.xml"), format="QUAKEML"
+                str(self.path / "ritter_events.xml"), format="QUAKEML"
             )
         else:
-            catalog = self._download_renass_events_xml()
+            catalog = self._download_ritter_events_xml()
 
         self.not_in_inv_catches = 0
         self.no_data_catches = 0
@@ -118,8 +114,6 @@ class RENASS(BenchmarkDataset):
 
             station_groups = defaultdict(list)
             for arrival in event.preferred_origin().arrivals:
-                if arrival.distance > 1.25:
-                    continue
 
                 pick = next(
                     (
@@ -133,13 +127,11 @@ class RENASS(BenchmarkDataset):
                 if pick is None or pick.phase_hint is None or pick.evaluation_mode != "manual":
                     continue
 
-                if pick.waveform_id.network_code in ["MT"]:
-                    seisbench.logger.warning(f"Ignoring pick with MT network")
-                    continue
 
-                if pick.waveform_id.station_code in ["ECK2", "ECK3", "ECK4", "ECK5", "VDH4", "RUSF", "EALK", "MFF"]:
-                    seisbench.logger.warning(f"Ignoring {pick.waveform_id.id}")
-                    continue
+                if pick.waveform_id.station_code in ["ECK2", "ECK3", "ECK4", "ECK5", "VDH4" ]:
+                   seisbench.logger.warning(f"Ignoring {pick.waveform_id.id}")
+                   continue
+
 
                 station_groups[
                     waveform_id_to_network_station_location(
@@ -247,7 +239,7 @@ class RENASS(BenchmarkDataset):
 
                 writer.add_trace({**event_params, **trace_params}, data)
 
-    def _download_renass_events_xml(
+    def _download_ritter_events_xml(
         self,
         starttime=obspy.UTCDateTime(2016, 1, 1),
         endtime=obspy.UTCDateTime(2024, 5, 1),
@@ -294,7 +286,7 @@ class RENASS(BenchmarkDataset):
             for ev_id in ev_ids:
                 catalog += self.client.get_events(eventid=ev_id, includearrivals=True)
                 pbar.update()
-        catalog.write(str(self.path / "renass_events.xml"), format="QUAKEML")
+        catalog.write(str(self.path / "ritter_events.xml"), format="QUAKEML")
 
         return catalog
 

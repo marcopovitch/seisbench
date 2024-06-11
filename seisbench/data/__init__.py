@@ -8,6 +8,8 @@ from .base import (
 )
 from .dummy import ChunkedDummyDataset, DummyDataset
 from .renass import RENASS
+from .induced import INDUCED
+from .ritter import RITTER
 from .ethz import ETHZ
 from .geofon import GEOFON
 from .instance import InstanceCounts, InstanceCountsCombined, InstanceGM, InstanceNoise
