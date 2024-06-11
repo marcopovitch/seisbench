@@ -22,21 +22,19 @@ from seisbench.util.trace_ops import (
 )
 
 
-class RITTER(BenchmarkDataset):
+class INDUCED(BenchmarkDataset):
     """
-    Rittershoffen 2013 stimulation dataset
+    Induced events
     """
 
     def __init__(self, **kwargs):
         citation = (
             "Each individual network has its own DOI. From publicly available data:\n"
-            "RT, \n"
-            "SZ: \n"
         )
 
         seisbench.logger.warning(
             "Check available storage and memory before downloading and general use "
-            "of RITTER dataset. "
+            "of INDUCED dataset. "
         )
 
         self._client = None
@@ -76,7 +74,7 @@ class RITTER(BenchmarkDataset):
 
         """
         seisbench.logger.info(
-            "No pre-processed version of RITTER dataset found. "
+            "No pre-processed version of INDUCED dataset found. "
             "Download and conversion of raw data will now be "
             "performed. This may take a while."
         )
@@ -93,10 +91,10 @@ class RITTER(BenchmarkDataset):
         inv = self.client.get_stations(includerestricted=False)
         inventory_mapper = InventoryMapper(inv)
 
-        if (self.path / "ritter_events.xml").exists():
+        if (self.path / "ritter_strass.xml").exists():
             seisbench.logger.info("Reading quakeml event catalog from cache.")
             catalog = obspy.read_events(
-                str(self.path / "ritter_events.xml"), format="QUAKEML"
+                str(self.path / "ritter_strass.xml"), format="QUAKEML"
             )
         else:
             catalog = self._download_ritter_events_xml()
